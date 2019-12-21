@@ -1,0 +1,50 @@
+import os
+import logging
+import argparse
+
+import spdyn_update.spdyn as spdyn
+import spdyn_update.consts as consts
+
+FORMAT = '%(asctime)s %(levelname)s|%(name)s - %(message)s'
+#DATE_FORMAT = '%d/%m/%Y %H:%M:%S.%f'
+logging.basicConfig(format=FORMAT)
+logger = logging.getLogger()
+
+
+def main():
+    spdyn_folder = os.path.expandvars(consts.SPDYN_FOLDER)
+    if not os.path.exists(spdyn_folder):
+        os.mkdir(spdyn_folder)
+    spdyn_update = spdyn.SpDynUpdate()
+    parser = argparse.ArgumentParser(prog='spdyn-update', usage="""How to use:...
+    do 1
+    do 2""")
+    subparsers = parser.add_subparsers(title='sub commands')
+    list_parser = subparsers.add_parser('list', help='list help')
+    list_parser.set_defaults(func=spdyn_update.list)
+    update_parser = subparsers.add_parser('update', help='update help')
+    update_parser.add_argument('-l', '--log', type=argparse.FileType('a'), help='log file path', required=False)
+    update_parser.add_argument('-c', '--config', type=argparse.FileType('a'), help='config file path', required=False)
+    update_parser.set_defaults(func=spdyn_update.update)
+    config_parser = subparsers.add_parser('config', help='config help')
+    config_parser.add_argument('-c', '--cat', help='host address', action='store_true', required=False)
+    config_parser.add_argument('-n', '--host', help='host address', required=False)
+    config_parser.add_argument('-u', '--user', help='username', required=False)
+    config_parser.add_argument('-p', '--password', help='password', required=False)
+    config_parser.add_argument('-f', '--file', help='file path to save config',
+                               type=argparse.FileType('a'), required=False)
+    config_parser.set_defaults(func=spdyn_update.config)
+    print_parser = config_parser.add_subparsers(title='config sub commands').add_parser('print',
+                                                                                        help='print config help')
+    print_parser.add_argument('-c', '--config', type=argparse.FileType('a'), help='config file path', required=False)
+    print_parser.set_defaults(func=spdyn_update.print_config)
+    # parse arguments
+    args = parser.parse_args()
+    # invoke requested method
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
+
+
