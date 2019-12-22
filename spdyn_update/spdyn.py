@@ -6,6 +6,8 @@ import urllib.request as urllib
 
 import spdyn_update.consts as consts
 
+from urllib.parse import urlencode
+
 ADDRESSES = ['https://api.ipify.org', 'http://checkip4.spdns.de']
 
 
@@ -23,9 +25,9 @@ class SpDynUpdate(object):
         if args.host is None:
             args.host = input(' [?] please enter the desired host you wish to update (no need for http/https): ')
         if args.user is None:
-            args.user = input(' [?] please enter your spdyn_update.de username: ')
+            args.user = input(' [?] please enter your spdyn.de username: ')
         if args.password is None:
-            args.password = getpass.getpass(' [?] please enter your spdyn_update.de password (not secured): ')
+            args.password = getpass.getpass(' [?] please enter your spdyn.de password (not secured) | or token: ')
 
         # config file path handling
         if args.file is None:
@@ -73,15 +75,22 @@ class SpDynUpdate(object):
             ipaddr = urllib.urlopen(address).read().decode('utf-8')
             if not self._valid_address(ipaddr):
                 continue
-            url = 'https://update.spdyn.de/nic/update?hostname=%s&myip=%s' % (site_conf['host'], ipaddr)
+            query_str = urlencode({
+                'hostname': site_conf['host'],
+                'myip': ipaddr,
+                'user': site_conf['user'],
+                'pass': site_conf['password']})
+            url = 'https://update.spdyn.de/nic/update'
             print(' [*] address found:', ipaddr)
-            print(' [*] update url -', url)
-            pwdmngr = urllib.HTTPPasswordMgrWithDefaultRealm()
-            pwdmngr.add_password('', url, site_conf['user'], site_conf['password'])
-            handler = urllib.HTTPBasicAuthHandler()
-            opener = urllib.build_opener(handler, urllib.HTTPSHandler())
-            opener_open = opener.open(url)
-            result = opener_open.read()
+            print(' [*] update url -', url + '?%s' % query_str)
+            # pwd_mgr = urllib.HTTPPasswordMgr()
+            # pwd_mgr.add_password("spdyn nic update", url, , )
+            # handler = urllib.HTTPBasicAuthHandler()
+            # opener = urllib.build_opener(handler)
+            # opener_open = opener.open(url)
+            # result = opener_open.read()
+            request = urllib.Request(url, query_str.encode('utf-8'))
+            result = urllib.urlopen(request).read()
             print(' [*] result -', result)
             # result should look like - good <ip-addr>
             print(' [*] done')

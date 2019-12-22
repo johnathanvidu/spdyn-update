@@ -27,10 +27,9 @@ def main():
     update_parser.add_argument('-c', '--config', type=argparse.FileType('a'), help='config file path', required=False)
     update_parser.set_defaults(func=spdyn_update.update)
     config_parser = subparsers.add_parser('config', help='config help')
-    config_parser.add_argument('-c', '--cat', help='host address', action='store_true', required=False)
     config_parser.add_argument('-n', '--host', help='host address', required=False)
     config_parser.add_argument('-u', '--user', help='username', required=False)
-    config_parser.add_argument('-p', '--password', help='password', required=False)
+    config_parser.add_argument('-p', '--password', help='password (not secured) or token', required=False)
     config_parser.add_argument('-f', '--file', help='file path to save config',
                                type=argparse.FileType('a'), required=False)
     config_parser.set_defaults(func=spdyn_update.config)
