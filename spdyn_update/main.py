@@ -21,7 +21,7 @@ def main():
     update_parser = subparsers.add_parser('update', help='update help')
     update_parser.add_argument('-l', '--log', type=argparse.FileType('a'), help='log file path', required=False)
     update_parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
-    update_parser.add_argument('-c', '--config', type=argparse.FileType('a'), help='config file path', required=False)
+    update_parser.add_argument('-c', '--config', help='config file path', required=False)
     update_parser.set_defaults(func=spdyn_update.update)
     config_parser = subparsers.add_parser('config', help='config help')
     config_parser.add_argument('-n', '--host', help='host address', required=False)
