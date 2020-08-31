@@ -1,14 +1,10 @@
 import os
+import sys
 import logging
 import argparse
 
 import spdyn_update.spdyn as spdyn
 import spdyn_update.consts as consts
-
-FORMAT = '%(asctime)s %(levelname)s|%(name)s - %(message)s'
-#DATE_FORMAT = '%d/%m/%Y %H:%M:%S.%f'
-logging.basicConfig(format=FORMAT)
-logger = logging.getLogger()
 
 
 def main():
@@ -24,6 +20,7 @@ def main():
     list_parser.set_defaults(func=spdyn_update.list)
     update_parser = subparsers.add_parser('update', help='update help')
     update_parser.add_argument('-l', '--log', type=argparse.FileType('a'), help='log file path', required=False)
+    update_parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     update_parser.add_argument('-c', '--config', type=argparse.FileType('a'), help='config file path', required=False)
     update_parser.set_defaults(func=spdyn_update.update)
     config_parser = subparsers.add_parser('config', help='config help')
@@ -39,6 +36,18 @@ def main():
     print_parser.set_defaults(func=spdyn_update.print_config)
     # parse arguments
     args = parser.parse_args()
+
+    # logging
+    root = logging.getLogger()
+    level = logging.INFO
+    if args.verbose:
+        level = logging.DEBUG
+    root.setLevel(level)
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('%(message)s  | %(asctime)s')
+    handler.setFormatter(formatter)
+    root.addHandler(handler)
+
     # invoke requested method
     args.func(args)
 

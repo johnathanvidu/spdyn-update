@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(name='spdyn_update',
       description='',
-      version='0.0.2',
+      version='0.0.3',
       packages=find_packages(),
       author='Johnathan Viduchinsky',
       author_email='johnathan.vidu@gmail.com',

@@ -1,5 +1,6 @@
 import os
 import getpass
+import logging
 import ipaddress
 import configparser
 import urllib.request as urllib
@@ -7,6 +8,8 @@ import urllib.request as urllib
 import spdyn_update.consts as consts
 
 from urllib.parse import urlencode
+
+logger = logging.getLogger(__name__)
 
 ADDRESSES = ['https://api.ipify.org', 'http://checkip4.spdns.de']
 
@@ -45,12 +48,12 @@ class SpDynUpdate(object):
         spdyn_config['host'] = args.host
         spdyn_config['user'] = args.user
         spdyn_config['password'] = args.password
+        spdyn_config['current_ip'] = ''
 
         # saving to config file
-        with open(args.file, 'w') as configfile:
-            config.write(configfile)
+        self._save_config(args.file, config)
 
-        print(' [*] success!')
+        logger.info(' [*] success!')
 
     def print_config(self, args):
         if args.config is None:
@@ -64,41 +67,62 @@ class SpDynUpdate(object):
                 print('%s=%s' % (key, value))
 
     def update(self, args):
+        success = False
+        logger.info(' [*] update requested')
+
         if args.config is None:
             args.config = os.path.join(os.path.expandvars(consts.SPDYN_FOLDER), 'config.ini')
 
         config = configparser.ConfigParser()
         config.read(args.config)
         site_conf = config['spdyn.de']
+        curr_ip = site_conf['current_ip'] or '0.0.0.0'  # fallback to 0.0.0.0 (shouldn't affect the operation)
 
         for address in ADDRESSES:
             ipaddr = urllib.urlopen(address).read().decode('utf-8')
+
+            logger.debug(f' [!] checking the validity of {ipaddr}')
             if not self._valid_address(ipaddr):
+                logger.debug(' [!] invalid, skipping...')
                 continue
+            if ipaddress.IPv4Address(ipaddr) == ipaddress.IPv4Address(curr_ip):  # if ip address hasn't changed there's no need to flood the dns provider
+                logger.debug(' [!] matching ip address, skipping...')
+                break
+
             query_str = urlencode({
                 'hostname': site_conf['host'],
                 'myip': ipaddr,
                 'user': site_conf['user'],
                 'pass': site_conf['password']})
             url = 'https://update.spdyn.de/nic/update'
-            print(' [*] address found:', ipaddr)
-            print(' [*] update url -', url + '?%s' % query_str)
-            # pwd_mgr = urllib.HTTPPasswordMgr()
-            # pwd_mgr.add_password("spdyn nic update", url, , )
-            # handler = urllib.HTTPBasicAuthHandler()
-            # opener = urllib.build_opener(handler)
-            # opener_open = opener.open(url)
-            # result = opener_open.read()
-            request = urllib.Request(url, query_str.encode('utf-8'))
-            result = urllib.urlopen(request).read()
-            print(' [*] result -', result)
-            # result should look like - good <ip-addr>
-            print(' [*] done')
+            logger.info(f' [*] address found: {ipaddr}')
+            logger.debug(f' [*] update url -{url}?%s{query_str}')
+            response_code = self._send_update_request(url, query_str)  # actual update request
+            if response_code == 200:  
+                success = True
+                site_conf['current_ip'] = ipaddr  # update config with current successful ip update
+                self._save_config(args.config, config)
+                logger.debug(' [!] config updated with a new shiny ip address')
             break
+        logger.info(' [*] done - success') if success else logger.info(' [*] done - nothing happened')
+
+    def _save_config(self, path, config):
+        with open(path, 'w') as configfile:
+            config.write(configfile)
 
     def _valid_address(self, ipaddr):
         try:
             ipaddress.IPv4Address(ipaddr)
             return True
-        except (ipaddress.AddressValueError, ValueError) as e:
+        except (ipaddress.AddressValueError, ValueError):
             return False
+
+    def _send_update_request(self, url, query_str):
+        try:
+            request = urllib.Request(url, query_str.encode('utf-8'))
+            response = urllib.urlopen(request)
+            result = response.read()
+            logger.info(f' [*] result - {result}')  # result should look like - good <ip-addr>
+            return response.getcode()
+        except Exception as e:
+            logger.error(f' [x] error occured while trying to update ip. message: {str(e)}')
