@@ -40,7 +40,7 @@ def main():
     # logging
     root = logging.getLogger()
     level = logging.INFO
-    if args.verbose:
+    if hasattr(args, 'verbose') and args.verbose:
         level = logging.DEBUG
     root.setLevel(level)
     handler = logging.StreamHandler(sys.stdout)
